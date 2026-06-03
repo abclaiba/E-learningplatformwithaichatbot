@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Chatbot – Powered by AI</title>
+  <meta name="description" content="A premium AI chatbot powered by Groq's ultra-fast LLM inference API." />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <style>
+    :root {
+      --bg-primary: #0a0e1a;
+      --bg-secondary: #0f1629;
+      --bg-card: #131d35;
+      --bg-input: #1a2540;
+      --border: #1e2d4a;
+      --accent: #4f8ef7;
+      --accent-2: #7c3aed;
+      --accent-glow: rgba(79, 142, 247, .25);
+      --text: #e2e8f0;
+      --text-muted: #64748b;
+      --user-bubble: linear-gradient(135deg, #4f8ef7, #7c3aed);
+      --bot-bubble: #131d35;
+      --radius: 14px;
+      --sidebar-w: 270px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Layout ────────────────────────────── */
+    .container {
+      display: flex;
+      height: 100vh;
+    }
+
+    /* ── Sidebar ───────────────────────────── */
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 20px 16px;
+      gap: 16px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -.3px;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--user-bubble);
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      font-size: 18px;
+    }
+
+    .new-chat-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 11px;
+      background: var(--user-bubble);
+      border: none;
+      border-radius: var(--radius);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .2s, transform .15s;
+    }
+
+    .new-chat-btn:hover {
+      opacity: .88;
+      transform: translateY(-1px);
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      padding: 0 4px;
+    }
+
+    .history {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .history::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .history::-webkit-scrollbar-thumb {
+      background: #1e2d4a;
+      border-radius: 4px;
+    }
+
+    .history-item {
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      color: var(--text-muted);
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: background .2s, color .2s;
+    }
+
+    .history-item:hover {
+      background: var(--bg-card);
+      color: var(--text);
+    }
+
+    /* model selector */
+    .model-select {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 9px 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      cursor: pointer;
+      outline: none;
+      width: 100%;
+    }
+
+    .model-select option {
+      background: var(--bg-secondary);
+    }
+
+    /* ── Main Chat ─────────────────────────── */
+    .chat-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .topbar {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg-secondary);
+    }
+
+    .topbar-left h2 {
+      font-size: 17px;
+      font-weight: 600;
+    }
+
+    .topbar-left p {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .status-dot {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: #22c55e;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 6px #22c55e;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: .4;
+      }
+    }
+
+    /* ── Messages ──────────────────────────── */
+    .messages {
+      flex: 1;
+      padding: 24px 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .messages::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    .messages::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+
+    .msg-row {
+      display: flex;
+      gap: 12px;
+      animation: slideUp .3s ease;
+    }
+
+    .msg-row.user {
+      flex-direction: row-reverse;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 16px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .avatar.bot {
+      background: var(--user-bubble);
+    }
+
+    .avatar.user {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+    }
+
+    .bubble {
+      max-width: 68%;
+      padding: 14px 16px;
+      border-radius: var(--radius);
+      font-size: 14.5px;
+      line-height: 1.65;
+    }
+
+    .bubble.user {
+      background: var(--user-bubble);
+      color: #fff;
+      border-radius: var(--radius) 4px var(--radius) var(--radius);
+    }
+
+    .bubble.bot {
+      background: var(--bot-bubble);
+      border: 1px solid var(--border);
+      border-radius: 4px var(--radius) var(--radius) var(--radius);
+    }
+
+    /* code inside bot bubbles */
+    .bubble pre {
+      background: #0d1117;
+      border: 1px solid #1e2d4a;
+      border-radius: 8px;
+      padding: 12px;
+      overflow-x: auto;
+      margin: 10px 0;
+      font-size: 13px;
+    }
+
+    .bubble code:not(pre code) {
+      background: #1a2540;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+
+    .bubble p {
+      margin-bottom: 6px;
+    }
+
+    .bubble ul,
+    .bubble ol {
+      padding-left: 20px;
+      margin-bottom: 6px;
+    }
+
+    /* typing indicator */
+    .typing-row {
+      display: flex;
+      gap: 12px;
+      animation: slideUp .3s ease;
+    }
+
+    .typing-bubble {
+      background: var(--bot-bubble);
+      border: 1px solid var(--border);
+      padding: 14px 18px;
+      border-radius: 4px var(--radius) var(--radius) var(--radius);
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+
+    .typing-bubble span {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: bounce 1.3s infinite;
+    }
+
+    .typing-bubble span:nth-child(2) {
+      animation-delay: .2s;
+    }
+
+    .typing-bubble span:nth-child(3) {
+      animation-delay: .4s;
+    }
+
+    @keyframes bounce {
+
+      0%,
+      80%,
+      100% {
+        transform: translateY(0);
+        opacity: .5;
+      }
+
+      40% {
+        transform: translateY(-6px);
+        opacity: 1;
+      }
+    }
+
+    /* welcome card */
+    .welcome {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      gap: 16px;
+      text-align: center;
+      padding: 40px;
+    }
+
+    .welcome-icon {
+      width: 64px;
+      height: 64px;
+      background: var(--user-bubble);
+      border-radius: 20px;
+      display: grid;
+      place-items: center;
+      font-size: 30px;
+      box-shadow: 0 8px 32px var(--accent-glow);
+    }
+
+    .welcome h1 {
+      font-size: 26px;
+      font-weight: 700;
+    }
+
+    .welcome p {
+      color: var(--text-muted);
+      font-size: 14px;
+      max-width: 380px;
+      line-height: 1.6;
+    }
+
+    .suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 8px;
+    }
+
+    .suggestion-chip {
+      padding: 9px 16px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      font-size: 13px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: background .2s, color .2s, border-color .2s;
+    }
+
+    .suggestion-chip:hover {
+      background: var(--bg-input);
+      color: var(--text);
+      border-color: var(--accent);
+    }
+
+    /* ── Input ─────────────────────────────── */
+    .input-area {
+      padding: 16px 20px 20px;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+    }
+
+    .input-box {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      transition: border-color .2s;
+    }
+
+    .input-box:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    textarea#userInput {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      resize: none;
+      font-size: 14.5px;
+      font-family: 'Inter', sans-serif;
+      max-height: 140px;
+      line-height: 1.5;
+    }
+
+    textarea#userInput::placeholder {
+      color: var(--text-muted);
+    }
+
+    .send-btn {
+      width: 40px;
+      height: 40px;
+      border: none;
+      border-radius: 10px;
+      background: var(--user-bubble);
+      color: #fff;
+      font-size: 17px;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      transition: opacity .2s, transform .15s;
+    }
+
+    .send-btn:hover:not(:disabled) {
+      opacity: .85;
+      transform: scale(1.05);
+    }
+
+    .send-btn:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+    }
+
+    .input-hint {
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 8px;
+    }
+
+    /* API key banner */
+    .api-banner {
+      background: rgba(79, 142, 247, .12);
+      border: 1px solid rgba(79, 142, 247, .3);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .api-banner a {
+      color: #7c3aed;
+      text-decoration: underline;
+    }
+
+    /* error bubble */
+    .error-bubble {
+      background: rgba(239, 68, 68, .1);
+      border: 1px solid rgba(239, 68, 68, .3);
+      color: #f87171;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 13.5px;
+    }
+
+    /* ── Responsive ────────────────────────── */
+    @media(max-width:768px) {
+      .sidebar {
+        display: none;
+      }
+
+      .bubble {
+        max-width: 88%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+
+    <!-- ── Sidebar ── -->
+    <div class="sidebar">
+
+      <div class="logo">
+        <div class="logo-icon">🤖</div>
+        Chat Bot
+      </div>
+
+      <button class="new-chat-btn" id="newChatBtn">
+        ✦ New Chat
+      </button>
+
+      <!-- Model picker -->
+      <select class="model-select" id="modelSelect">
+        <option value="llama-3.3-70b-versatile">Llama 3.3 70B</option>
+        <option value="llama-3.1-8b-instant">Llama 3.1 8B (Fast)</option>
+        <option value="mixtral-8x7b-32768">Mixtral 8x7B</option>
+        <option value="gemma2-9b-it">Gemma 2 9B</option>
+      </select>
+
+      <div class="section-label">Recent</div>
+
+      <div class="history" id="historyList"></div>
+
+    </div>
+
+    <!-- ── Chat Section ── -->
+    <div class="chat-section">
+
+      <div class="topbar">
+        <div class="topbar-left">
+          <h2>AI Assistant</h2>
+          <p>Powered by AI Ultra-Fast Inference</p>
+        </div>
+        <div class="status-dot">
+          <div class="dot"></div>
+          Online
+        </div>
+      </div>
+
+      <!-- Messages -->
+      <div class="messages" id="messages">
+
+        <!-- Welcome screen (hidden when chats start) -->
+        <div class="welcome" id="welcomeScreen">
+          <div class="welcome-icon">✦</div>
+          <h1>Hello! I'm AI CHATBot</h1>
+          <p>Ultra-fast CHATBot powered by AI. Ask me anything — code, science, writing, math, or just chat!</p>
+          <div class="suggestions">
+            <div class="suggestion-chip" onclick="sendSuggestion('Explain how neural networks work')">Explain neural
+              networks</div>
+            <div class="suggestion-chip" onclick="sendSuggestion('Write a Python function to sort a list')">Python sort
+              function</div>
+            <div class="suggestion-chip" onclick="sendSuggestion('What are the best practices in web development?')">Web
+              dev best practices</div>
+            <div class="suggestion-chip" onclick="sendSuggestion('Tell me a fun science fact')">Fun science fact</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Input -->
+      <div class="input-area">
+
+        <div class="api-banner" id="apiBanner">
+          🔑 Add your Groq API key below &nbsp;|&nbsp; Get one free at <a href="https://console.groq.com"
+            target="_blank">console.groq.com</a>
+        </div>
+
+        <div class="input-box">
+          <textarea id="userInput" rows="1"
+            placeholder="Type your message… (Enter to send, Shift+Enter for new line)"></textarea>
+          <button class="send-btn" id="sendBtn" title="Send">➤</button>
+        </div>
+
+        <!-- hidden API key input that shows inside input area -->
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <input type="password" id="apiKeyInput" placeholder="Paste your Groq API key here…" style="
+            flex:1;
+            background:var(--bg-input);
+            border:1px solid var(--border);
+            color:var(--text);
+            padding:9px 14px;
+            border-radius:10px;
+            font-size:13px;
+            outline:none;
+            font-family:'Inter',sans-serif;
+          " />
+          <button onclick="saveKey()" style="
+          padding:9px 18px;
+          background:var(--user-bubble);
+          border:none;
+          border-radius:10px;
+          color:#fff;
+          font-size:13px;
+          font-weight:600;
+          cursor:pointer;
+        ">Save Key</button>
+        </div>
+
+        <!---- <div class="input-hint">GroqBot · Models run on Groq Cloud · Your key is stored only in your browser
+    </div>
+  -->
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    // ─── State ──────────────────────────────────────────────────────────────────
+    let GROQ_API_KEY = localStorage.getItem("groq_api_key") || "";
+    let conversationHistory = [];    // [{role, content}]
+    let chatSessions = JSON.parse(localStorage.getItem("chat_sessions") || "[]");
+    let isLoading = false;
+
+    // ─── DOM refs ────────────────────────────────────────────────────────────────
+    const messagesEl = document.getElementById("messages");
+    const userInput = document.getElementById("userInput");
+    const sendBtn = document.getElementById("sendBtn");
+    const historyList = document.getElementById("historyList");
+    const modelSelect = document.getElementById("modelSelect");
+    const apiKeyInput = document.getElementById("apiKeyInput");
+    const welcomeScreen = document.getElementById("welcomeScreen");
+    const apiBanner = document.getElementById("apiBanner");
+
+    // ─── Init ────────────────────────────────────────────────────────────────────
+    if (GROQ_API_KEY) {
+      apiKeyInput.value = GROQ_API_KEY;
+      apiBanner.style.display = "none";
+    }
+    renderHistoryList();
+
+    // ─── Save API key ─────────────────────────────────────────────────────────────
+    function saveKey() {
+      const k = apiKeyInput.value.trim();
+      if (!k) { alert("Please paste a valid Groq API key."); return; }
+      GROQ_API_KEY = k;
+      localStorage.setItem("groq_api_key", k);
+      apiBanner.style.display = "none";
+      addSystemMessage("✅ API key saved! You can now chat with me.");
+    }
+
+    // ─── Render sidebar history ───────────────────────────────────────────────────
+    function renderHistoryList() {
+      historyList.innerHTML = "";
+      [...chatSessions].reverse().forEach((session, i) => {
+        const div = document.createElement("div");
+        div.className = "history-item";
+        div.textContent = session.title;
+        div.title = session.title;
+        div.onclick = () => loadSession(chatSessions.length - 1 - i);
+        historyList.appendChild(div);
+      });
+    }
+
+    function loadSession(index) {
+      const session = chatSessions[index];
+      conversationHistory = [...session.messages];
+      messagesEl.innerHTML = "";
+      welcomeScreen && welcomeScreen.remove();
+      session.messages.forEach(m => {
+        if (m.role !== "system") addBubble(m.content, m.role === "user" ? "user" : "bot");
+      });
+    }
+
+    // ─── Messages ─────────────────────────────────────────────────────────────────
+    function hideWelcome() {
+      const w = document.getElementById("welcomeScreen");
+      if (w) w.remove();
+    }
+
+    function addBubble(text, type) {
+      const row = document.createElement("div");
+      row.className = "msg-row " + type;
+
+      const av = document.createElement("div");
+      av.className = "avatar " + type;
+      av.textContent = type === "user" ? "👤" : "🤖";
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble " + type;
+      bubble.innerHTML = formatText(text);
+
+      row.appendChild(av);
+      row.appendChild(bubble);
+      messagesEl.appendChild(row);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+
+      // syntax highlight any code blocks
+      row.querySelectorAll("pre code").forEach(el => hljs.highlightElement(el));
+
+      return bubble;
+    }
+
+    function addSystemMessage(text) {
+      const div = document.createElement("div");
+      div.style.cssText = "text-align:center;font-size:12px;color:var(--text-muted);padding:4px 0;";
+      div.textContent = text;
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    // streaming typing indicator replaced by actual content
+    function showTyping() {
+      const row = document.createElement("div");
+      row.className = "typing-row";
+      row.id = "typingRow";
+
+      const av = document.createElement("div");
+      av.className = "avatar bot";
+      av.textContent = "🤖";
+
+      const bubble = document.createElement("div");
+      bubble.className = "typing-bubble";
+      bubble.innerHTML = "<span></span><span></span><span></span>";
+
+      row.appendChild(av);
+      row.appendChild(bubble);
+      messagesEl.appendChild(row);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function removeTyping() {
+      const t = document.getElementById("typingRow");
+      if (t) t.remove();
+    }
+
+    // ─── Format markdown-lite ─────────────────────────────────────────────────────
+    function formatText(text) {
+      // escape html first
+      let s = text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+
+      // code blocks
+      s = s.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) =>
+        `<pre><code class="language-${lang || 'plaintext'}">${code.trim()}</code></pre>`
+      );
+
+      // inline code
+      s = s.replace(/`([^`]+)`/g, "<code>$1</code>");
+
+      // bold / italic
+      s = s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+      s = s.replace(/\*(.+?)\*/g, "<em>$1</em>");
+
+      // headings
+      s = s.replace(/^### (.+)$/gm, "<h4 style='margin:8px 0 4px;font-size:14px;'>$1</h4>");
+      s = s.replace(/^## (.+)$/gm, "<h3 style='margin:10px 0 4px;font-size:15px;'>$1</h3>");
+      s = s.replace(/^# (.+)$/gm, "<h2 style='margin:10px 0 4px;font-size:16px;'>$1</h2>");
+
+      // bullet lists
+      s = s.replace(/^\s*[-*] (.+)$/gm, "<li>$1</li>");
+      s = s.replace(/(<li>.*<\/li>)/s, "<ul>$1</ul>");
+
+      // line breaks (not inside pre)
+      s = s.replace(/\n(?!<\/?(pre|code|ul|li|h[2-4]))/g, "<br>");
+
+      return s;
+    }
+
+    // ─── Send Message ─────────────────────────────────────────────────────────────
+    async function sendMessage() {
+      const text = userInput.value.trim();
+      if (!text || isLoading) return;
+
+      if (!GROQ_API_KEY) {
+        addSystemMessage("⚠️ Please save your Groq API key first.");
+        return;
+      }
+
+      hideWelcome();
+      isLoading = true;
+      sendBtn.disabled = true;
+
+      addBubble(text, "user");
+      userInput.value = "";
+      autoResize();
+
+      conversationHistory.push({ role: "user", content: text });
+
+      showTyping();
+
+      try {
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + GROQ_API_KEY
+          },
+          body: JSON.stringify({
+            model: modelSelect.value,
+            messages: [
+              {
+                role: "system",
+                content: "You are GroqBot, a helpful, friendly, and knowledgeable AI assistant. Answer clearly and concisely. Use markdown formatting when useful (code blocks, lists, etc.)."
+              },
+              ...conversationHistory
+            ],
+            temperature: 0.7,
+            max_tokens: 1024
+          })
+        });
+
+        removeTyping();
+
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+          const msg = err?.error?.message || `HTTP ${response.status}`;
+          addBubble(`❌ Groq API Error: ${msg}`, "bot");
+          conversationHistory.pop();
+        } else {
+          const data = await response.json();
+          const reply = data.choices?.[0]?.message?.content || "No response received.";
+          addBubble(reply, "bot");
+          conversationHistory.push({ role: "assistant", content: reply });
+
+          // save session
+          const title = text.substring(0, 40) + (text.length > 40 ? "…" : "");
+          chatSessions.push({ title, messages: [...conversationHistory] });
+          localStorage.setItem("chat_sessions", JSON.stringify(chatSessions));
+          renderHistoryList();
+        }
+
+      } catch (err) {
+        removeTyping();
+        addBubble("❌ Network error. Check your internet connection and API key.", "bot");
+        conversationHistory.pop();
+        console.error(err);
+      }
+
+      isLoading = false;
+      sendBtn.disabled = false;
+      userInput.focus();
+    }
+
+    function sendSuggestion(text) {
+      userInput.value = text;
+      sendMessage();
+    }
+
+    // ─── New Chat ─────────────────────────────────────────────────────────────────
+    document.getElementById("newChatBtn").onclick = () => {
+      conversationHistory = [];
+      messagesEl.innerHTML = `
+    <div class="welcome" id="welcomeScreen">
+      <div class="welcome-icon">✦</div>
+      <h1>Hello! I'm GroqBot</h1>
+      <p>Ultra-fast AI powered by Groq. Ask me anything — code, science, writing, math, or just chat!</p>
+      <div class="suggestions">
+        <div class="suggestion-chip" onclick="sendSuggestion('Explain how neural networks work')">Explain neural networks</div>
+        <div class="suggestion-chip" onclick="sendSuggestion('Write a Python function to sort a list')">Python sort function</div>
+        <div class="suggestion-chip" onclick="sendSuggestion('What are the best practices in web development?')">Web dev best practices</div>
+        <div class="suggestion-chip" onclick="sendSuggestion('Tell me a fun science fact')">Fun science fact</div>
+      </div>
+    </div>
+  `;
+    };
+
+    // ─── Auto-resize textarea ─────────────────────────────────────────────────────
+    function autoResize() {
+      userInput.style.height = "auto";
+      userInput.style.height = Math.min(userInput.scrollHeight, 140) + "px";
+    }
+    userInput.addEventListener("input", autoResize);
+
+    // ─── Enter to send ────────────────────────────────────────────────────────────
+    userInput.addEventListener("keydown", e => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    sendBtn.addEventListener("click", sendMessage);
+  </script>
+
+</body>
+
+</html>
+//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
